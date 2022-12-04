@@ -16,7 +16,7 @@ def main(port):
         port = sys.argv[1]
 
     context = zmq.Context()
-    socket = context.socket(zmq.PAIR)
+    socket = context.socket(zmq.REP)
     socket.bind("tcp://*:%s" % port)
     print(f"Server running on port {port}")
     kernel_server = KernelServer()
@@ -28,6 +28,7 @@ def main(port):
         print(message)
         cmd = message[0]
         if cmd == "shutdown":
+            socket.send_pyobj(["shutting_down"])
             shutdown = True
             kernel_server.shutdown()
 
@@ -43,7 +44,11 @@ def main(port):
             socket.send_pyobj(["new_kernel", *cf])
 
         elif cmd == "close_kernel":
-            kernel_server.close_kernel(message[1])
+            socket.send_pyobj(["closing_kernel"])
+            try:
+                kernel_server.close_kernel(message[1])
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
